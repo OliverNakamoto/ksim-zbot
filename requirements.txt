@@ -1,7 +1,7 @@
 # requirements.txt
 
 # Training dependencies
-ksim=
+ksim
 xax
 mujoco-scenes
 
