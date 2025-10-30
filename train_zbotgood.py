@@ -24,110 +24,62 @@ from ksim.utils.mujoco import get_ctrl_data_idx_by_name
 
 logger = logging.getLogger(__name__)
 
-# Robot configurations
-ROBOT_CONFIGS = {
-    "zeroth": {
-        "num_joints": 16,
-        "has_imu": True,
-        "com_inertia_size": 190,  # Actual size from environment for 16 joints + IMU link
-        "com_velocity_size": 114,  # Actual size from environment for 16 joints + IMU link
-        "joint_biases": [
-            ("right_hip_pitch", -0.0, 0.01),  # 0, range=[-1.570796, 1.570796]
-            ("right_hip_yaw", 0.0, 1.0),  # 1, range=[-1.570796, 0.087266]
-            ("right_hip_roll", -0.78, 1.0),  # 2, range=[-0.785398, 0.785398]
-            ("right_knee_pitch", -3.6, 0.01),  # 3, range=[-4.712389, -1.570796]
-            ("right_ankle_pitch", -0.0, 0.01),  # 4, range=[-1.570796, 1.570796]
-            ("left_hip_pitch", -0.0, 0.01),  # 5, range=[-1.570796, 1.570796]
-            ("left_hip_yaw", 0.0, 1.0),  # 6, range=[-1.570796, 0.087266]
-            ("left_hip_roll", 0.78, 1.0),  # 7, range=[-0.785398, 0.785398]
-            ("left_knee_pitch", -0.0, 0.01),  # 8, range=[-1.570796, 1.570796]
-            ("left_ankle_pitch", -0.0, 0.01),  # 9, range=[-1.570796, 1.570796]
-            ("right_shoulder_pitch", 0.0, 1.0),  # 10, range=[-1.745329, 1.745329]
-            ("right_shoulder_yaw", -0.2, 1.0),  # 11, range=[-1.134464, 0.872665]
-            ("right_elbow_yaw", 0.2, 1.0),  # 12, range=[-1.570796, 1.570796]
-            ("left_shoulder_pitch", 0.0, 1.0),  # 13, range=[-1.745329, 1.745329]
-            ("left_shoulder_yaw", 0.2, 1.0),  # 14, range=[-1.134464, 0.872665]
-            ("left_elbow_yaw", -0.2, 1.0),  # 15, range=[-1.570796, 1.570796]
-        ],
-        "foot_sites": {
-            "left": "left_ankle_pitch_site",
-            "right": "right_ankle_pitch_site",
-        },
-        "foot_bodies": {
-            "left": "foot_left",
-            "right": "foot_right",
-        },
-    },
-    "zbot": {
-        "num_joints": 20,
-        "has_imu": True,
-        "com_inertia_size": 250,  # Actual size from environment for 20 joints
-        "com_velocity_size": 150,  # Actual size from environment for 20 joints
-        "joint_biases": [
-            ("right_hip_yaw", 0.0, 1.0),  # 0
-            ("right_hip_roll", -0.1, 1.0),  # 1
-            ("right_hip_pitch", -0.4, 0.01),  # 2
-            ("right_knee_pitch", -0.8, 0.01),  # 3
-            ("right_ankle_pitch", -0.4, 0.01),  # 4
-            ("right_ankle_roll", -0.1, 0.01),  # 5
-            ("left_hip_yaw", 0.0, 1.0),  # 6
-            ("left_hip_roll", 0.1, 1.0),  # 7
-            ("left_hip_pitch", -0.4, 0.01),  # 8
-            ("left_knee_pitch", -0.8, 0.01),  # 9
-            ("left_ankle_pitch", -0.4, 0.01),  # 10
-            ("left_ankle_roll", 0.1, 0.01),  # 11
-            ("left_shoulder_pitch", 0.0, 1.0),  # 12
-            ("left_shoulder_roll", 0.2, 1.0),  # 13
-            ("left_elbow_roll", -0.2, 1.0),  # 14
-            ("left_gripper_roll", 0.0, 1.0),  # 15
-            ("right_shoulder_pitch", 0.0, 1.0),  # 16
-            ("right_shoulder_roll", -0.2, 1.0),  # 17
-            ("right_elbow_roll", 0.2, 1.0),  # 18
-            ("right_gripper_roll", 0.0, 1.0),  # 19
-        ],
-        "foot_sites": {
-            "left": "left_foot",
-            "right": "right_foot",
-        },
-        "foot_bodies": {
-            "left": "Left_Foot",
-            "right": "Right_Foot",
-        },
-    },
-}
+NUM_JOINTS = 20
+NUM_COMMANDS = 6
 
-# Default to zeroth robot configuration at module load time
-NUM_JOINTS: int = 16
-NUM_COMMANDS: int = 6
-JOINT_BIASES: list[tuple[str, float, float]] = ROBOT_CONFIGS["zeroth"]["joint_biases"]
-COMMAND_NAME = "zero_command"
-
-# Initialize with zeroth robot dimensions (16 joints, WITH IMU)
 ACTOR_DIM: dict[str, int] = dict(
-    joint_positions=16,
-    joint_velocity=16,
-    projected_gravity=3,  # zeroth now has IMU
+    joint_positions=20,
+    joint_velocity=20,
+    imu_orientation=4,
     cmd_linear_velocity=2,
     cmd_absolute_yaw=1,
     cmd_base_height_roll_pitch=3,
 )
 
 CRITIC_DIM: dict[str, int] = dict(
-    joint_positions=16,
-    joint_velocity=16,
-    com_inertia=190,  # zeroth: 190 (16 joints + IMU link)
-    com_velocity=114,  # zeroth: 114 (16 joints + IMU link)
-    imu_acc=3,  # zeroth now has IMU
-    imu_gyro=3,  # zeroth now has IMU
-    projected_gravity=3,  # zeroth now has IMU
+    joint_positions=20,
+    joint_velocity=20,
+    com_inertia=250,
+    com_velocity=150,
+    imu_acc=3,
+    imu_gyro=3,
+    imu_quat=4,
     cmd_all=7,
-    act_force=16,
+    act_force=20,
     base_pos=3,
     base_quat=4,
 )
 
-NUM_ACTOR_INPUTS: int = sum(ACTOR_DIM.values())  # 41 for zeroth with IMU
-NUM_CRITIC_INPUTS: int = sum(CRITIC_DIM.values())  # 375 for zeroth with IMU (includes IMU link in CoM)
+NUM_ACTOR_INPUTS = sum(ACTOR_DIM.values())  # 50
+NUM_CRITIC_INPUTS = sum(CRITIC_DIM.values())  # 484
+
+COMMAND_NAME = "zero_command"
+
+
+# These are in the order of the neural network outputs.
+# (joint_name, reference_angle_rad, weight)
+JOINT_BIASES: list[tuple[str, float, float]] = [
+    ("right_hip_yaw", 0.0, 1.0),  # 0
+    ("right_hip_roll", -0.1, 1.0),  # 1
+    ("right_hip_pitch", -0.4, 0.01),  # 2
+    ("right_knee_pitch", -0.8, 0.01),  # 3
+    ("right_ankle_pitch", -0.4, 0.01),  # 4
+    ("right_ankle_roll", -0.1, 0.01),  # 5
+    ("left_hip_yaw", 0.0, 1.0),  # 6
+    ("left_hip_roll", 0.1, 1.0),  # 7
+    ("left_hip_pitch", -0.4, 0.01),  # 8
+    ("left_knee_pitch", -0.8, 0.01),  # 9
+    ("left_ankle_pitch", -0.4, 0.01),  # 10
+    ("left_ankle_roll", 0.1, 0.01),  # 11
+    ("left_shoulder_pitch", 0.0, 1.0),  # 12
+    ("left_shoulder_roll", 0.2, 1.0),  # 13
+    ("left_elbow_roll", -0.2, 1.0),  # 14
+    ("left_gripper_roll", 0.0, 1.0),  # 15
+    ("right_shoulder_pitch", 0.0, 1.0),  # 16
+    ("right_shoulder_roll", -0.2, 1.0),  # 17
+    ("right_elbow_roll", 0.2, 1.0),  # 18
+    ("right_gripper_roll", 0.0, 1.0),  # 19
+]
 
 
 # Joystick Components, unused at the moment.
@@ -246,9 +198,6 @@ class UnifiedCommand(ksim.Command):
     ry_range: tuple[float, float] = attrs.field()
     ctrl_dt: float = attrs.field()
     switch_prob: float = attrs.field()
-
-    def get_name(self) -> str:
-        return COMMAND_NAME
 
     def initial_command(self, physics_data: ksim.PhysicsData, curriculum_level: Array, rng: PRNGKeyArray) -> Array:
         rng_a, rng_b, rng_c, rng_d, rng_e, rng_f, rng_g, rng_h = jax.random.split(rng, 8)
@@ -651,22 +600,16 @@ class AnkleKneePenalty(JointPositionPenalty):
         physics_model: ksim.PhysicsModel,
         scale: float = -1.0,
         scale_by_curriculum: bool = False,
-        robot_name: str = "zeroth",
     ) -> Self:
-        # Base names that all robots have
-        names = [
-            "left_knee_pitch",
-            "left_ankle_pitch",
-            "right_knee_pitch",
-            "right_ankle_pitch",
-        ]
-
-        # Add ankle_roll for zbot
-        if robot_name == "zbot":
-            names.extend(["left_ankle_roll", "right_ankle_roll"])
-
         return cls.create_from_names(
-            names=names,
+            names=[
+                "left_knee_pitch",
+                "left_ankle_pitch",
+                "left_ankle_roll",
+                "right_knee_pitch",
+                "right_ankle_pitch",
+                "right_ankle_roll",
+            ],
             physics_model=physics_model,
             scale=scale,
             scale_by_curriculum=scale_by_curriculum,
@@ -683,10 +626,9 @@ class ArmPosePenalty(JointPositionPenalty):
         physics_model: ksim.PhysicsModel,
         scale: float = -1.0,
         scale_by_curriculum: bool = True,
-        robot_name: str = "zeroth",
     ) -> "ArmPosePenalty":
-        if robot_name == "zbot":
-            names = [
+        return cls.create_from_names(
+            names=[
                 "left_shoulder_pitch",
                 "left_shoulder_roll",
                 "left_elbow_roll",
@@ -695,19 +637,7 @@ class ArmPosePenalty(JointPositionPenalty):
                 "right_shoulder_roll",
                 "right_elbow_roll",
                 "right_gripper_roll",
-            ]
-        else:  # zeroth
-            names = [
-                "left_shoulder_pitch",
-                "left_shoulder_yaw",
-                "left_elbow_yaw",
-                "right_shoulder_pitch",
-                "right_shoulder_yaw",
-                "right_elbow_yaw",
-            ]
-
-        return cls.create_from_names(
-            names=names,
+            ],
             physics_model=physics_model,
             scale=scale,
             scale_by_curriculum=scale_by_curriculum,
@@ -907,7 +837,7 @@ class ImuOrientationObservation(ksim.StatefulObservation):
             noise=noise,
         )
 
-    def initial_carry(self, rng: PRNGKeyArray) -> tuple[Array, Array]:
+    def initial_carry(self, physics_state: ksim.PhysicsState, rng: PRNGKeyArray) -> tuple[Array, Array]:
         minval, maxval = self.lag_range
         return jnp.zeros((4,)), jax.random.uniform(rng, (1,), minval=minval, maxval=maxval)
 
@@ -955,12 +885,12 @@ class Actor(eqx.Module):
     input_proj: eqx.nn.Linear
     rnns: tuple[eqx.nn.GRUCell, ...]
     output_proj: eqx.nn.Linear
-    num_inputs: int = eqx.field(static=True)
-    num_outputs: int = eqx.field(static=True)
-    num_mixtures: int = eqx.field(static=True)
-    min_std: float = eqx.field(static=True)
-    max_std: float = eqx.field(static=True)
-    var_scale: float = eqx.field(static=True)
+    num_inputs: int = eqx.static_field()
+    num_outputs: int = eqx.static_field()
+    num_mixtures: int = eqx.static_field()
+    min_std: float = eqx.static_field()
+    max_std: float = eqx.static_field()
+    var_scale: float = eqx.static_field()
 
     def __init__(
         self,
@@ -1164,24 +1094,6 @@ class ZbotWalkingTaskConfig(ksim.PPOConfig):
     render_distance: float = xax.field(
         value=0.8,
         help="The distance to the render camera.",
-    )
-
-    # Sensor configuration
-    use_imu: bool = xax.field(
-        value=False,
-        help="Whether to use IMU sensors (imu_site_quat, imu_acc, imu_gyro). Set to False for robots without IMU sensors.",
-    )
-
-    # Debug configuration
-    inspect_start: bool = xax.field(
-        value=False,
-        help="If True, holds the robot in its initial pose without running the policy for inspection.",
-    )
-
-    # Robot selection
-    robot: str = xax.field(
-        value="zeroth",
-        help="Which robot to use: 'zeroth' (16 joints, no IMU) or 'zbot' (20 joints, has IMU)",
     )
 
 
@@ -1396,51 +1308,6 @@ class FeetechTorqueObservation(ksim.Observation):
 class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
     delta_max_j: jnp.ndarray | None = None  # set later in get_actuators
 
-    def __init__(self, config: ZbotWalkingTaskConfig):
-        # Update global variables based on robot selection BEFORE calling super().__init__
-        global NUM_JOINTS, JOINT_BIASES, ACTOR_DIM, CRITIC_DIM, NUM_ACTOR_INPUTS, NUM_CRITIC_INPUTS
-
-        robot_config = ROBOT_CONFIGS[config.robot]
-        NUM_JOINTS = robot_config["num_joints"]
-        JOINT_BIASES = robot_config["joint_biases"]
-
-        # Auto-enable IMU for robots that have IMU sensors
-        if robot_config["has_imu"]:
-            # Override use_imu to True for robots with IMU capability
-            object.__setattr__(config, "use_imu", True)
-
-        # Set IMU dimensions based on robot capabilities and config
-        imu_dim = 3 if (robot_config["has_imu"] and config.use_imu) else 0
-
-        ACTOR_DIM = dict(
-            joint_positions=NUM_JOINTS,
-            joint_velocity=NUM_JOINTS,
-            projected_gravity=imu_dim,
-            cmd_linear_velocity=2,
-            cmd_absolute_yaw=1,
-            cmd_base_height_roll_pitch=3,
-        )
-
-        CRITIC_DIM = dict(
-            joint_positions=NUM_JOINTS,
-            joint_velocity=NUM_JOINTS,
-            com_inertia=robot_config["com_inertia_size"],
-            com_velocity=robot_config["com_velocity_size"],
-            imu_acc=imu_dim,
-            imu_gyro=imu_dim,
-            projected_gravity=imu_dim,
-            cmd_all=7,
-            act_force=NUM_JOINTS,
-            base_pos=3,
-            base_quat=4,
-        )
-
-        NUM_ACTOR_INPUTS = sum(ACTOR_DIM.values())
-        NUM_CRITIC_INPUTS = sum(CRITIC_DIM.values())
-
-        # Now call parent init with properly configured dimensions
-        super().__init__(config)
-
     def get_optimizer(self) -> optax.GradientTransformation:
         optimizer = optax.chain(
             optax.clip_by_global_norm(self.config.max_grad_norm),
@@ -1454,14 +1321,14 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
         return optimizer
 
     def get_mujoco_model(self) -> mujoco.MjModel:
-        mjcf_path = asyncio.run(ksim.get_mujoco_model_path(self.config.robot, name="robot"))
+        mjcf_path = asyncio.run(ksim.get_mujoco_model_path("zbot", name="robot"))
         model = mujoco_scenes.mjcf.load_mjmodel(mjcf_path, scene="smooth")
         names_to_idxs = ksim.get_geom_data_idx_by_name(model)
         model.geom_priority[names_to_idxs["floor"]] = 2.0
         return model
 
     def get_mujoco_model_metadata(self, mj_model: mujoco.MjModel) -> Metadata:
-        metadata = asyncio.run(ksim.get_mujoco_model_metadata(self.config.robot))
+        metadata = asyncio.run(ksim.get_mujoco_model_metadata("zbot"))
         # Ensure we're returning a proper RobotURDFMetadataOutput
         if not isinstance(metadata, Metadata):
             raise ValueError("Metadata is not a Metadata")
@@ -1566,26 +1433,35 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
             torque_noise_type="none",
         )
 
-    def get_physics_randomizers(self, physics_model: ksim.PhysicsModel) -> list[ksim.PhysicsRandomizer]:
-        return [
+    def get_physics_randomizers(self, physics_model: ksim.PhysicsModel) -> tuple[ksim.PhysicsRandomizer, ...]:
+        return (
             ksim.StaticFrictionRandomizer(),
             ksim.ArmatureRandomizer(),
             ksim.AllBodiesMassMultiplicationRandomizer(scale_lower=0.95, scale_upper=1.15),
             ksim.JointDampingRandomizer(),
             ksim.JointZeroPositionRandomizer(scale_lower=math.radians(-2), scale_upper=math.radians(2)),
-        ]
+            ksim.FloorFrictionRandomizer.from_geom_name(
+                model=physics_model, floor_geom_name="floor", scale_lower=0.3, scale_upper=1.5
+            ),
+            # 1σ ≈ 1.5°, gives ~99.7% within 4.5°
+            # enable yaw randomization with 1σ ≈ 1°
+            # 5mm standard deviation
+            ksim.IMUAlignmentRandomizer(
+                site_name="imu_site", tilt_std_rad=math.radians(5), yaw_std_rad=math.radians(1.0), translate_std_m=0.005
+            ),
+        )
 
     def get_events(self, physics_model: ksim.PhysicsModel) -> tuple[ksim.Event, ...]:
         return (
             ksim.PushEvent(
-                x_force=1.0,
-                y_force=1.0,
-                z_force=0.3,
-                force_range=(0.5, 1.0),
-                x_angular_force=0.0,
-                y_angular_force=0.0,
-                z_angular_force=0.0,
-                interval_range=(0.5, 4.0),
+                x_linvel=0.1,
+                y_linvel=0.1,
+                z_linvel=0.05,
+                x_angvel=0.0,
+                y_angvel=0.0,
+                z_angvel=0.0,
+                vel_range=(0.05, 0.15),
+                interval_range=(2.0, 4.0),
             ),
         )
 
@@ -1611,80 +1487,80 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
             ksim.BaseAngularVelocityObservation(),
             ksim.BaseLinearAccelerationObservation(),
             ksim.BaseAngularAccelerationObservation(),
+            ImuOrientationObservation.create(
+                physics_model=physics_model,
+                framequat_name="imu_site_quat",
+                lag_range=(0.0, 0.1),
+                noise=math.radians(1),
+            ),
             ksim.ActuatorAccelerationObservation(),
+            ksim.SensorObservation.create(
+                physics_model=physics_model,
+                sensor_name="imu_acc",
+                noise=0.5,
+            ),
+            ksim.SensorObservation.create(
+                physics_model=physics_model,
+                sensor_name="imu_gyro",
+                noise=math.radians(0),
+            ),
         ]
-
-        # IMU UNDO: Comment out IMU observations if use_imu=False
-        if self.config.use_imu:
-            obs_list += [
-                ksim.ProjectedGravityObservation.create(
-                    physics_model=physics_model,
-                    framequat_name="imu_site_quat",
-                    lag_range=(0.0, 0.1),
-                    noise=math.radians(1),
-                ),
-                ksim.SensorObservation.create(
-                    physics_model=physics_model,
-                    sensor_name="imu_acc",
-                    noise=0.5,
-                ),
-                ksim.SensorObservation.create(
-                    physics_model=physics_model,
-                    sensor_name="imu_gyro",
-                    noise=math.radians(0),
-                ),
-            ]
-
+        # get_observations
         obs_list += [
-        ]
-        # IMU UNDO: Comment out foot touch/force sensors if use_imu=False (they're usually paired with IMU)
-        if self.config.use_imu:
-            obs_list += [
-                ksim.SensorObservation.create(physics_model=physics_model, sensor_name="left_foot_touch", noise=0.0),
-                ksim.SensorObservation.create(physics_model=physics_model, sensor_name="right_foot_touch", noise=0.0),
-                ksim.SensorObservation.create(physics_model=physics_model, sensor_name="left_foot_force", noise=0.0),
-                ksim.SensorObservation.create(physics_model=physics_model, sensor_name="right_foot_force", noise=0.0),
-            ]
-
-        robot_config = ROBOT_CONFIGS[self.config.robot]
-        obs_list += [
+            ksim.SensorObservation.create(physics_model=physics_model, sensor_name="left_foot_touch", noise=0.0),
+            ksim.SensorObservation.create(physics_model=physics_model, sensor_name="right_foot_touch", noise=0.0),
+            ksim.SensorObservation.create(physics_model=physics_model, sensor_name="left_foot_force", noise=0.0),
+            ksim.SensorObservation.create(physics_model=physics_model, sensor_name="right_foot_force", noise=0.0),
             FeetPositionObservation.create(
                 physics_model=physics_model,
-                foot_left_site_name=robot_config["foot_sites"]["left"],
-                foot_right_site_name=robot_config["foot_sites"]["right"],
+                foot_left_site_name="left_foot",
+                foot_right_site_name="right_foot",
                 floor_threshold=0.0,
                 in_robot_frame=True,
             ),
         ]
 
+        # Add action-position observation for each joint
+        obs_list.extend(
+            [
+                ksim.ActPosObservation.create(
+                    physics_model=physics_model,
+                    joint_name=joint_name,
+                )
+                for joint_name, _, _ in JOINT_BIASES
+            ]
+        )
+
         return obs_list
 
     def get_commands(self, physics_model: ksim.PhysicsModel) -> list[ksim.Command]:
         return [
-            UnifiedCommand(
-                vx_range=(-0.8, 0.8),      # Forward/backward velocity
-                vy_range=(-0.5, 0.5),      # Left/right velocity
-                wz_range=(-0.8, 0.8),      # Turning velocity
-                bh_range=(-0.05, 0.05),    # Base height variation
-                bh_standing_range=(-0.03, 0.03),
-                rx_range=(-0.1, 0.1),      # Roll angle
-                ry_range=(-0.1, 0.1),      # Pitch angle
+            ConstantZeroCommand(
                 ctrl_dt=self.config.ctrl_dt,
-                switch_prob=0.02,          # 2% chance to switch command each step
             )
         ]
 
     def get_rewards(self, physics_model: ksim.PhysicsModel) -> list[ksim.Reward]:
-        robot_config = ROBOT_CONFIGS[self.config.robot]
-        rewards = [
-            ksim.NaiveForwardReward(clip_max=1.25, in_robot_frame=False, scale=3.0),
-            ksim.NaiveForwardOrientationReward(scale=1.0),
-            ksim.StayAliveReward(scale=4.0),
-            ksim.UprightReward(scale=0.5),
+        return [
+            ksim.StayAliveReward(scale=1.0),
+            ksim.UprightReward(scale=1.0),
+            ksim.NaiveForwardReward(scale=5.0, clip_min=None, clip_max=0.2),
+            ksim.NaiveForwardOrientationReward(scale=0.3),
+            ksim.LinearVelocityPenalty(
+                index="y",
+                in_robot_frame=True,
+                norm="l1",
+                scale=-5.0,
+            ),
+            SimpleSingleFootContactReward(scale=0.3, stand_still_threshold=None),
+            FeetAirtimeReward(
+                scale=10.0,
+                ctrl_dt=self.config.ctrl_dt,
+                touchdown_penalty=0.1,
+                stand_still_threshold=None,
+            ),
             FeetOrientationReward.create(
                 physics_model,
-                left_name=robot_config["foot_bodies"]["left"],
-                right_name=robot_config["foot_bodies"]["right"],
                 target_rp=(0.0, 0.0),
                 error_scale=0.25,
                 scale=0.3,
@@ -1692,39 +1568,38 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
             FeetTooClosePenalty(
                 feet_pos_obs_key="feet_position_observation",
                 threshold_m=0.12,
-                scale=-0.005,
+                scale=-0.5,
             ),
             StraightLegPenalty.create_penalty(physics_model, scale=-0.5, scale_by_curriculum=True),
-            AnkleKneePenalty.create_penalty(physics_model, scale=-0.025, scale_by_curriculum=True, robot_name=self.config.robot),
-            ksim.JointAccelerationPenalty(scale=-0.01, scale_by_curriculum=True),
-            ArmPosePenalty.create_penalty(physics_model, scale=-0.5, scale_by_curriculum=True, robot_name=self.config.robot),
+            AnkleKneePenalty.create_penalty(physics_model, scale=-0.025, scale_by_curriculum=True),
+            # ksim.ActionVelocityPenalty(scale=-0.01,  scale_by_curriculum=True),
+            # ksim.JointVelocityPenalty (scale=-0.01,  scale_by_curriculum=True),
+            # ksim.JointAccelerationPenalty(scale=-0.01, scale_by_curriculum=True),
+            ContactForcePenalty( # NOTE this could actually be good but eliminate until needed
+                 scale=-0.03,
+                 sensor_names=("sensor_observation_left_foot_force", "sensor_observation_right_foot_force"),
+            ),
+            ArmPosePenalty.create_penalty(physics_model, scale=-2.00, scale_by_curriculum=True),
+            #ksim.ActionTrackingReward(
+            #    error_scale=0.1,
+            #    scale=0.4,
+            #    use_exponential=False,
+            #    scale_by_curriculum=True,
+            #),
+            #ksim.ActionVelocityPenalty(scale=-2.0, scale_by_curriculum=True),
+            ksim.ReachabilityPenalty(
+                delta_max_j=tuple(float(x) for x in self.delta_max_j),
+                scale=-1.0,
+                squared=False,
+                scale_by_curriculum=True,
+            ),
         ]
 
-        # Only add sensor-based rewards if the robot has IMU/touch sensors
-        if self.config.use_imu:
-            rewards.extend([
-                SimpleSingleFootContactReward(scale=0.3, stand_still_threshold=None),
-                FeetAirtimeReward(
-                    scale=0.1,
-                    ctrl_dt=self.config.ctrl_dt,
-                    touchdown_penalty=0.1,
-                    stand_still_threshold=None,
-                ),
-                ContactForcePenalty(
-                    scale=-0.03,
-                    sensor_names=("sensor_observation_left_foot_force", "sensor_observation_right_foot_force"),
-                ),
-            ])
-
-        return rewards
-
     def get_terminations(self, physics_model: ksim.PhysicsModel) -> list[ksim.Termination]:
-        # List all termination conditions:
-        # 1. BadZTermination: base height < 0.05m or > 0.5m
-        # 2. NotUprightTermination: tilt > 60 degrees
         return [
-            ksim.BadZTermination(unhealthy_z_lower=0.15, unhealthy_z_upper=4.5),
-            # ksim.NotUprightTermination(max_radians=math.radians(60)),
+            ksim.BadZTermination(unhealthy_z_lower=0.05, unhealthy_z_upper=0.5),
+            ksim.NotUprightTermination(max_radians=math.radians(60)),
+            ksim.EpisodeLengthTermination(max_length_sec=80),
         ]
 
     def get_curriculum(self, physics_model: ksim.PhysicsModel) -> ksim.Curriculum:
@@ -1758,25 +1633,20 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
     ) -> tuple[distrax.Distribution, Array]:
         joint_pos_n = observations["joint_position_observation"]
         joint_vel_n = observations["joint_velocity_observation"]
+        imu_quat_4 = observations["imu_orientation_observation"]
         cmd = commands[COMMAND_NAME]  # shape (...,7)
 
-        obs_parts = [
-            joint_pos_n,   # NUM_JOINTS
-            joint_vel_n,   # NUM_JOINTS
-        ]
-
-        # IMU UNDO: Only include projected_gravity if use_imu=True
-        if self.config.use_imu:
-            proj_grav_3 = observations["projected_gravity_observation"]
-            obs_parts.append(proj_grav_3)  # 3
-
-        obs_parts.extend([
-            cmd[..., :2],  # vx, vy
-            cmd[..., 3:4], # heading   (index 3)
-            cmd[..., 4:],  # bh, rx, ry
-        ])
-
-        obs_n = jnp.concatenate(obs_parts, axis=-1)
+        obs_n = jnp.concatenate(
+            [
+                joint_pos_n,   # NUM_JOINTS
+                joint_vel_n,   # NUM_JOINTS
+                imu_quat_4,    # 4
+                cmd[..., :2],  # vx, vy
+                cmd[..., 3:4], # heading   (index 3)
+                cmd[..., 4:],  # bh, rx, ry
+            ],
+            axis=-1,
+        )
 
         action, carry = model.forward(obs_n, carry)
 
@@ -1793,37 +1663,30 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
         dh_joint_vel_j = observations["joint_velocity_observation"]
         com_inertia_n = observations["center_of_mass_inertia_observation"]
         com_vel_n = observations["center_of_mass_velocity_observation"]
+        imu_acc_3 = observations["sensor_observation_imu_acc"]
+        imu_gyro_3 = observations["sensor_observation_imu_gyro"]
+        imu_quat_4 = observations["imu_orientation_observation"]
         cmd_7 = commands[COMMAND_NAME]  # still 7 elements for critic
         act_frc_obs_n = observations["actuator_force_observation"]
         base_pos_3 = observations["base_position_observation"]
         base_quat_4 = observations["base_orientation_observation"]
 
-        obs_parts = [
-            dh_joint_pos_j,  # NUM_JOINTS
-            dh_joint_vel_j / 10.0,  # NUM_JOINTS
-            com_inertia_n,  # 190 for zeroth, 250 for zbot
-            com_vel_n,  # 114 for zeroth, 150 for zbot
-        ]
-
-        # IMU UNDO: Only include IMU observations if use_imu=True
-        if self.config.use_imu:
-            imu_acc_3 = observations["sensor_observation_imu_acc"]
-            imu_gyro_3 = observations["sensor_observation_imu_gyro"]
-            proj_grav_3 = observations["projected_gravity_observation"]
-            obs_parts.extend([
+        obs_n = jnp.concatenate(
+            [
+                dh_joint_pos_j,  # NUM_JOINTS
+                dh_joint_vel_j / 10.0,  # NUM_JOINTS
+                com_inertia_n,  # 250
+                com_vel_n,  # 150
                 imu_acc_3,  # 3
                 imu_gyro_3,  # 3
-                proj_grav_3,  # 3
-            ])
-
-        obs_parts.extend([
-            cmd_7,  # 7
-            act_frc_obs_n / 100.0,  # NUM_JOINTS
-            base_pos_3,  # 3
-            base_quat_4,  # 4
-        ])
-
-        obs_n = jnp.concatenate(obs_parts, axis=-1)
+                imu_quat_4,  # 4
+                cmd_7,  # 7
+                act_frc_obs_n / 100.0,  # NUM_JOINTS
+                base_pos_3,  # 3
+                base_quat_4,  # 4
+            ],
+            axis=-1,
+        )
 
         return model.forward(obs_n, carry)
 
@@ -1892,15 +1755,6 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
         rng: PRNGKeyArray,
         argmax: bool,
     ) -> ksim.Action:
-        # If inspect_start is enabled, return the reference pose from JOINT_BIASES
-        if self.config.inspect_start:
-            reference_pose = jnp.array([v for _, v, _ in JOINT_BIASES])
-            actor_carry_in, critic_carry_in = model_carry
-            return ksim.Action(
-                action=reference_pose,
-                carry=model_carry,
-            )
-
         actor_carry_in, critic_carry_in = model_carry
         rng, actor_rng = jax.random.split(rng)
         action_dist_j, actor_carry = self.run_actor(
@@ -1923,11 +1777,11 @@ if __name__ == "__main__":
     ZbotWalkingTask.launch(
         ZbotWalkingTaskConfig(
             # Training parameters.
-            num_envs=64,
-            batch_size=8,
+            num_envs=4096,
+            batch_size=256,
             learning_rate=1e-3,
             num_passes=4,
-            # epochs_per_log_step=1,
+            epochs_per_log_step=1,
             rollout_length_seconds=8.0,
             # Simulation parameters.
             dt=0.001,
@@ -1937,10 +1791,8 @@ if __name__ == "__main__":
             # Checkpointing parameters.
             save_every_n_seconds=60,
             valid_every_n_steps=5,
-            # render_full_every_n_seconds=10,
+            render_full_every_n_seconds=10,
             render_azimuth=145.0,
-            # GUG: Changed max latency from 0.10 to 0.03 to be within 1.5x of ctrl_dt (0.02)
-            # This prevents the warning: `max_action_latency=0.100000` is greater than `ctrl_dt=0.020000`
-            action_latency_range=(0.003, 0.03),
+            action_latency_range=(0.003, 0.10),
         ),
     )
