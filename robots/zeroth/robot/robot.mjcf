@@ -45,7 +45,7 @@
   </asset>
 
   <worldbody>
-    <body name="base" pos="0.00000000 0.00000000 0.35500000" quat="1 0 0 0" childclass="robot">
+    <body name="base" pos="0.00000000 0.00000000 0.35" quat="1 0 0 0" childclass="robot">
       <freejoint name="floating_base" />
       <geom name="base_visual" pos="0 0 0" quat="1.0 0.0 0.0 0.0" material="base_material" type="sphere" size="0.01" class="visual" />
       <body name="Torso" pos="0 0 0" quat="1.0 0.0 0.0 0.0">

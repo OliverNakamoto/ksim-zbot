@@ -4,6 +4,7 @@ import asyncio
 import logging
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Self, TypedDict
 
 import attrs
@@ -1356,19 +1357,22 @@ class FeetechActuators(StatefulActuators):
         current_pos_j = physics_data.qpos[7:]
         current_vel_j = physics_data.qvel[6:]
 
-        # DEBUG: Print only joint 3 and full qpos for debugging
-        jax.debug.print("FULL_QPOS (first 11 values - base + first 4 joints): {}", physics_data.qpos[:11])
-        jax.debug.print("CURRENT_POS[3]: {}", current_pos_j[3])
-        jax.debug.print("CURRENT_POS_ALL: {}", current_pos_j)
-        jax.debug.print("PLANNER_STATE_POS[3]: {}", actuator_state.position[3])
+        # Print base height (z-coordinate)
+        jax.debug.print("Height: {}", physics_data.qpos[2])
+
+        # # DEBUG: Print only joint 3 and full qpos for debugging
+        # jax.debug.print("FULL_QPOS (first 11 values - base + first 4 joints): {}", physics_data.qpos[:11])
+        # jax.debug.print("CURRENT_POS[3]: {}", current_pos_j[3])
+        # jax.debug.print("CURRENT_POS_ALL: {}", current_pos_j)
+        # jax.debug.print("PLANNER_STATE_POS[3]: {}", actuator_state.position[3])
 
         planner_state = actuator_state
         planner_state, (desired_position, desired_velocity) = trapezoidal_step(
             planner_state, action, self.dt, self.vmax_j, self.amax_j, self.positive_deadband, self.negative_deadband
         )
 
-        # DEBUG: Print only joint 3
-        jax.debug.print("DESIRED_POS[3]: {}", desired_position[3])
+        # # DEBUG: Print only joint 3
+        # jax.debug.print("DESIRED_POS[3]: {}", desired_position[3])
 
         pos_error_j = desired_position - current_pos_j
         vel_error_j = desired_velocity - current_vel_j
@@ -1381,8 +1385,8 @@ class FeetechActuators(StatefulActuators):
         volts_j = duty_j * self.vin_j
         torque_j = volts_j * self.kt_j / self.r_j
 
-        # DEBUG: Print only joint 3
-        jax.debug.print("FINAL_TORQUE[3]: {}\n", torque_j[3])
+        # # DEBUG: Print only joint 3
+        # jax.debug.print("FINAL_TORQUE[3]: {}\n", torque_j[3])
 
         new_planner_state = PlannerState(
             position=planner_state.position,  # Updated by trapezoidal_step
@@ -1489,7 +1493,12 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
         return optimizer
 
     def get_mujoco_model(self) -> mujoco.MjModel:
-        mjcf_path = asyncio.run(ksim.get_mujoco_model_path(self.config.robot, name="robot"))
+        # Check if local custom robot MJCF exists
+        local_mjcf = Path("robots/zeroth/robot/robot.mjcf")
+        if local_mjcf.exists():
+            mjcf_path = str(local_mjcf.absolute())
+        else:
+            mjcf_path = asyncio.run(ksim.get_mujoco_model_path(self.config.robot, name="robot"))
         model = mujoco_scenes.mjcf.load_mjmodel(mjcf_path, scene="smooth")
         names_to_idxs = ksim.get_geom_data_idx_by_name(model)
         model.geom_priority[names_to_idxs["floor"]] = 2.0
@@ -1948,8 +1957,8 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
 
         action_j = action_dist_j.mode() if argmax else action_dist_j.sample(seed=rng)
 
-        # DEBUG: Print only joint 3
-        jax.debug.print("SAMPLED_ACTION[3]: {}", action_j[3])
+        # # DEBUG: Print only joint 3
+        # jax.debug.print("SAMPLED_ACTION[3]: {}", action_j[3])
 
         return ksim.Action(
             action=action_j,
