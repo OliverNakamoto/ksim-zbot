@@ -35,22 +35,23 @@ ROBOT_CONFIGS = {
         "com_inertia_size": 190,  # Actual size from environment for 16 joints + IMU link
         "com_velocity_size": 114,  # Actual size from environment for 16 joints + IMU link
         "joint_biases": [
-            ("right_hip_pitch", -0.0471, 0.01),  # 0, range=[-1.570796, 1.570796]
-            ("right_hip_yaw", -0.0951, 1.0),  # 1, range=[-1.570796, 0.087266]
-            ("right_hip_roll", -0.785, 1.0),  # 2, range=[-0.785398, 0.785398]
-            ("right_knee_pitch", -2.98, 0.01),  # 3, range=[-4.712389, -1.570796]
-            ("right_ankle_pitch", 0.298, 0.01),  # 4, range=[-1.570796, 1.570796]
-            ("left_hip_pitch", 0.0943, 0.01),  # 5, range=[-1.570796, 1.570796]
-            ("left_hip_yaw", -0.0951, 1.0),  # 6, range=[-1.570796, 0.087266]
-            ("left_hip_roll", 0.785, 1.0),  # 7, range=[-0.785398, 0.785398]
-            ("left_knee_pitch", 0.0943, 0.01),  # 8, range=[-1.570796, 1.570796]
-            ("left_ankle_pitch", 0.0157, 0.01),  # 9, range=[-1.570796, 1.570796]
-            ("right_shoulder_pitch", 0.0, 1.0),  # 10, range=[-1.745329, 1.745329]
-            ("right_shoulder_yaw", 0.0, 1.0),  # 11, range=[-1.134464, 0.872665]
-            ("right_elbow_yaw", 0.0, 1.0),  # 12, range=[-1.570796, 1.570796]
-            ("left_shoulder_pitch", 0.0, 1.0),  # 13, range=[-1.745329, 1.745329]
-            ("left_shoulder_yaw", 0.0, 1.0),  # 14, range=[-1.134464, 0.872665]
-            ("left_elbow_yaw", 0.0, 1.0),  # 15, range=[-1.570796, 1.570796]
+            # IMPORTANT: Order matches robot.mjcf actuator section (lines 179-196)
+            ("right_shoulder_pitch", 0.0, 1.0),  # 0, range=[-1.745329, 1.745329]
+            ("right_shoulder_yaw", 0.0, 1.0),  # 1, range=[-1.134464, 0.872665]
+            ("right_elbow_yaw", 0.0, 1.0),  # 2, range=[-1.570796, 1.570796]
+            ("left_shoulder_pitch", 0.0, 1.0),  # 3, range=[-1.745329, 1.745329]
+            ("left_shoulder_yaw", 0.0, 1.0),  # 4, range=[-1.134464, 0.872665]
+            ("left_elbow_yaw", 0.0, 1.0),  # 5, range=[-1.570796, 1.570796]
+            ("right_hip_pitch", -0.0471, 0.01),  # 6, range=[-1.570796, 1.570796]
+            ("right_hip_yaw", -0.0951, 1.0),  # 7, range=[-1.570796, 0.087266]
+            ("right_hip_roll", -0.785, 1.0),  # 8, range=[-0.785398, 0.785398]
+            ("right_knee_pitch", -2.98, 0.01),  # 9, range=[-4.712389, -1.570796]
+            ("right_ankle_pitch", 0.298, 0.01),  # 10, range=[-1.570796, 1.570796]
+            ("left_hip_pitch", 0.0943, 0.01),  # 11, range=[-1.570796, 1.570796]
+            ("left_hip_yaw", -0.0951, 1.0),  # 12, range=[-1.570796, 0.087266]
+            ("left_hip_roll", 0.785, 1.0),  # 13, range=[-0.785398, 0.785398]
+            ("left_knee_pitch", 0.0943, 0.01),  # 14, range=[-1.570796, 1.570796]
+            ("left_ankle_pitch", 0.0157, 0.01),  # 15, range=[-1.570796, 1.570796]
         ],
         "foot_sites": {
             "left": "left_ankle_pitch_site",
@@ -1030,9 +1031,8 @@ class Actor(eqx.Module):
         # Softplus and clip to ensure positive standard deviations.
         std_nm = jnp.clip((jax.nn.softplus(std_nm) + self.min_std) * self.var_scale, max=self.max_std)
 
-        # COMMENTED OUT: Bias addition (fixing motor reference issue)
-        # bias_values = jnp.array([v for _, v, _ in JOINT_BIASES])
-        # mean_nm = mean_nm + bias_values[:, None]
+        # Apply bias to mean (adds reference pose from JOINT_BIASES)
+        mean_nm = mean_nm + jnp.array([v for _, v, _ in JOINT_BIASES])[:, None]
 
         dist_n = ksim.MixtureOfGaussians(means_nm=mean_nm, stds_nm=std_nm, logits_nm=logits_nm)
 
