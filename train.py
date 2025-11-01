@@ -32,22 +32,22 @@ ROBOT_CONFIGS = {
         "com_inertia_size": 190,  # Actual size from environment for 16 joints + IMU link
         "com_velocity_size": 114,  # Actual size from environment for 16 joints + IMU link
         "joint_biases": [
-            ("right_hip_pitch", -0.0, 0.01),  # 0, range=[-1.570796, 1.570796]
-            ("right_hip_yaw", 0.0, 1.0),  # 1, range=[-1.570796, 0.087266]
-            ("right_hip_roll", -0.78, 1.0),  # 2, range=[-0.785398, 0.785398]
-            ("right_knee_pitch", -3.6, 0.01),  # 3, range=[-4.712389, -1.570796]
-            ("right_ankle_pitch", -0.0, 0.01),  # 4, range=[-1.570796, 1.570796]
-            ("left_hip_pitch", -0.0, 0.01),  # 5, range=[-1.570796, 1.570796]
-            ("left_hip_yaw", 0.0, 1.0),  # 6, range=[-1.570796, 0.087266]
-            ("left_hip_roll", 0.78, 1.0),  # 7, range=[-0.785398, 0.785398]
-            ("left_knee_pitch", -0.0, 0.01),  # 8, range=[-1.570796, 1.570796]
-            ("left_ankle_pitch", -0.0, 0.01),  # 9, range=[-1.570796, 1.570796]
+            ("right_hip_pitch", -0.0471, 0.01),  # 0, range=[-1.570796, 1.570796]
+            ("right_hip_yaw", -0.0951, 1.0),  # 1, range=[-1.570796, 0.087266]
+            ("right_hip_roll", -0.785, 1.0),  # 2, range=[-0.785398, 0.785398]
+            ("right_knee_pitch", -2.98, 0.01),  # 3, range=[-4.712389, -1.570796]
+            ("right_ankle_pitch", 0.298, 0.01),  # 4, range=[-1.570796, 1.570796]
+            ("left_hip_pitch", 0.0943, 0.01),  # 5, range=[-1.570796, 1.570796]
+            ("left_hip_yaw", -0.0951, 1.0),  # 6, range=[-1.570796, 0.087266]
+            ("left_hip_roll", 0.785, 1.0),  # 7, range=[-0.785398, 0.785398]
+            ("left_knee_pitch", 0.0943, 0.01),  # 8, range=[-1.570796, 1.570796]
+            ("left_ankle_pitch", 0.0157, 0.01),  # 9, range=[-1.570796, 1.570796]
             ("right_shoulder_pitch", 0.0, 1.0),  # 10, range=[-1.745329, 1.745329]
-            ("right_shoulder_yaw", -0.2, 1.0),  # 11, range=[-1.134464, 0.872665]
-            ("right_elbow_yaw", 0.2, 1.0),  # 12, range=[-1.570796, 1.570796]
+            ("right_shoulder_yaw", 0.0, 1.0),  # 11, range=[-1.134464, 0.872665]
+            ("right_elbow_yaw", 0.0, 1.0),  # 12, range=[-1.570796, 1.570796]
             ("left_shoulder_pitch", 0.0, 1.0),  # 13, range=[-1.745329, 1.745329]
-            ("left_shoulder_yaw", 0.2, 1.0),  # 14, range=[-1.134464, 0.872665]
-            ("left_elbow_yaw", -0.2, 1.0),  # 15, range=[-1.570796, 1.570796]
+            ("left_shoulder_yaw", 0.0, 1.0),  # 14, range=[-1.134464, 0.872665]
+            ("left_elbow_yaw", 0.0, 1.0),  # 15, range=[-1.570796, 1.570796]
         ],
         "foot_sites": {
             "left": "left_ankle_pitch_site",
@@ -1184,6 +1184,12 @@ class ZbotWalkingTaskConfig(ksim.PPOConfig):
         help="Which robot to use: 'zeroth' (16 joints, no IMU) or 'zbot' (20 joints, has IMU)",
     )
 
+    # Command/behavior mode selection
+    command_mode: str = xax.field(
+        value="standing",
+        help="Training behavior mode: 'standing' (learn to stand still), 'walking' (moderate locomotion), 'locomotion' (full dynamic movement)",
+    )
+
 
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
@@ -1578,10 +1584,10 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
     def get_events(self, physics_model: ksim.PhysicsModel) -> tuple[ksim.Event, ...]:
         return (
             ksim.PushEvent(
-                x_force=1.0,
-                y_force=1.0,
-                z_force=0.3,
-                force_range=(0.5, 1.0),
+                x_force=0.1,
+                y_force=0.1,
+                z_force=0.03,
+                force_range=(0.05, 0.1),
                 x_angular_force=0.0,
                 y_angular_force=0.0,
                 z_angular_force=0.0,
@@ -1660,21 +1666,57 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
         return obs_list
 
     def get_commands(self, physics_model: ksim.PhysicsModel) -> list[ksim.Command]:
-        return [
-            UnifiedCommand(
-                vx_range=(-0.8, 0.8),      # Forward/backward velocity
-                vy_range=(-0.5, 0.5),      # Left/right velocity
-                wz_range=(-0.8, 0.8),      # Turning velocity
-                bh_range=(-0.05, 0.05),    # Base height variation
-                bh_standing_range=(-0.03, 0.03),
-                rx_range=(-0.1, 0.1),      # Roll angle
-                ry_range=(-0.1, 0.1),      # Pitch angle
-                ctrl_dt=self.config.ctrl_dt,
-                switch_prob=0.02,          # 2% chance to switch command each step
-            )
-        ]
+        """Get commands based on the selected training mode.
+
+        Modes:
+        - 'standing': Zero commands - robot learns to stand still and balance
+        - 'walking': Moderate velocity commands - focused walking behavior
+        - 'locomotion': Full dynamic movement with turning and orientation changes
+        """
+        if self.config.command_mode == "standing":
+            # Learn to stand still - zero velocity commands like zbot
+            return [
+                ConstantZeroCommand(
+                    ctrl_dt=self.config.ctrl_dt,
+                )
+            ]
+        elif self.config.command_mode == "walking":
+            # Moderate walking - forward/backward with gentle lateral movement
+            return [
+                UnifiedCommand(
+                    vx_range=(-0.5, 0.5),      # Moderate forward/backward
+                    vy_range=(-0.2, 0.2),      # Limited lateral movement
+                    wz_range=(-0.3, 0.3),      # Limited turning
+                    bh_range=(-0.03, 0.03),    # Small base height variation
+                    bh_standing_range=(-0.02, 0.02),
+                    rx_range=(-0.05, 0.05),    # Limited roll
+                    ry_range=(-0.05, 0.05),    # Limited pitch
+                    ctrl_dt=self.config.ctrl_dt,
+                    switch_prob=0.02,
+                )
+            ]
+        else:  # "locomotion" - full dynamic movement (default)
+            return [
+                UnifiedCommand(
+                    vx_range=(-0.8, 0.8),      # Forward/backward velocity
+                    vy_range=(-0.5, 0.5),      # Left/right velocity
+                    wz_range=(-0.8, 0.8),      # Turning velocity
+                    bh_range=(-0.05, 0.05),    # Base height variation
+                    bh_standing_range=(-0.03, 0.03),
+                    rx_range=(-0.1, 0.1),      # Roll angle
+                    ry_range=(-0.1, 0.1),      # Pitch angle
+                    ctrl_dt=self.config.ctrl_dt,
+                    switch_prob=0.02,          # 2% chance to switch command each step
+                )
+            ]
 
     def get_rewards(self, physics_model: ksim.PhysicsModel) -> list[ksim.Reward]:
+        """Get rewards - same for all command modes.
+
+        The command mode only changes what velocity commands the robot receives,
+        but the rewards stay the same. The robot learns different behaviors
+        naturally based on the commands it gets during training.
+        """
         robot_config = ROBOT_CONFIGS[self.config.robot]
         rewards = [
             ksim.NaiveForwardReward(clip_max=1.25, in_robot_frame=False, scale=3.0),
@@ -1692,20 +1734,26 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
             FeetTooClosePenalty(
                 feet_pos_obs_key="feet_position_observation",
                 threshold_m=0.12,
-                scale=-0.005,
+                scale=-0.5,
             ),
             StraightLegPenalty.create_penalty(physics_model, scale=-0.5, scale_by_curriculum=True),
             AnkleKneePenalty.create_penalty(physics_model, scale=-0.025, scale_by_curriculum=True, robot_name=self.config.robot),
             ksim.JointAccelerationPenalty(scale=-0.01, scale_by_curriculum=True),
-            ArmPosePenalty.create_penalty(physics_model, scale=-0.5, scale_by_curriculum=True, robot_name=self.config.robot),
+            ArmPosePenalty.create_penalty(physics_model, scale=-2.0, scale_by_curriculum=True, robot_name=self.config.robot),
         ]
 
         # Only add sensor-based rewards if the robot has IMU/touch sensors
         if self.config.use_imu:
             rewards.extend([
+                ksim.LinearVelocityPenalty(
+                    index="y",
+                    in_robot_frame=True,
+                    norm="l1",
+                    scale=-5.0,
+                ),
                 SimpleSingleFootContactReward(scale=0.3, stand_still_threshold=None),
                 FeetAirtimeReward(
-                    scale=0.1,
+                    scale=10.0,
                     ctrl_dt=self.config.ctrl_dt,
                     touchdown_penalty=0.1,
                     stand_still_threshold=None,
@@ -1720,11 +1768,11 @@ class ZbotWalkingTask(ksim.PPOTask[ZbotWalkingTaskConfig]):
 
     def get_terminations(self, physics_model: ksim.PhysicsModel) -> list[ksim.Termination]:
         # List all termination conditions:
-        # 1. BadZTermination: base height < 0.05m or > 0.5m
+        # 1. BadZTermination: base height < 0.15m or > 4.5m
         # 2. NotUprightTermination: tilt > 60 degrees
         return [
             ksim.BadZTermination(unhealthy_z_lower=0.15, unhealthy_z_upper=4.5),
-            # ksim.NotUprightTermination(max_radians=math.radians(60)),
+            ksim.NotUprightTermination(max_radians=math.radians(60)),
         ]
 
     def get_curriculum(self, physics_model: ksim.PhysicsModel) -> ksim.Curriculum:
